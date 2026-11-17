@@ -54,7 +54,7 @@ export const VRVideoScene: React.FC<VRVideoSceneProps> = ({
         device-orientation-permission-ui="enabled: true"
         className="h-full w-full"
       >
-        <a-assets timeout="10000">
+        <a-assets timeout="30000">
           <video
             id="vr-360-video-asset"
             src={activeVideoUrl}
