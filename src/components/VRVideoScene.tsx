@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { UI_TEXT } from '../constants/uiText';
 import { useVRVideo } from '../hooks/useVRVideo';
 import VRControlBar from './vr/VRControlBar';
@@ -17,6 +17,8 @@ export const VRVideoScene: React.FC<VRVideoSceneProps> = ({
   onDownloadCSV,
   onRestart,
 }) => {
+  const [isInVRMode, setIsInVRMode] = useState(false);
+
   const {
     isAFrameLoaded,
     isPlaying,
@@ -32,6 +34,24 @@ export const VRVideoScene: React.FC<VRVideoSceneProps> = ({
     toggleFlip,
     handleSeekStart,
   } = useVRVideo({ videoSrc, onVideoEnd });
+
+  // VR moduna girip çıkmayı takip et
+  useEffect(() => {
+    if (!isAFrameLoaded) return;
+    const scene = document.querySelector('a-scene');
+    if (!scene) return;
+
+    const onEnterVR = () => setIsInVRMode(true);
+    const onExitVR = () => setIsInVRMode(false);
+
+    scene.addEventListener('enter-vr', onEnterVR);
+    scene.addEventListener('exit-vr', onExitVR);
+
+    return () => {
+      scene.removeEventListener('enter-vr', onEnterVR);
+      scene.removeEventListener('exit-vr', onExitVR);
+    };
+  }, [isAFrameLoaded]);
 
   if (!isAFrameLoaded) {
     return (
@@ -69,10 +89,32 @@ export const VRVideoScene: React.FC<VRVideoSceneProps> = ({
 
         <a-camera position="0 1.6 0" look-controls="enabled: true" wasd-controls="enabled: false">
           <a-cursor color="#22d3ee" fuse={false} raycaster="objects: .clickable" />
+
+          {/* VR modunda video bittiğinde kamera önünde gösterilecek bilgi paneli */}
+          {isEnded && (
+            <a-entity position="0 0 -2">
+              <a-plane
+                color="#050d1a"
+                opacity="0.92"
+                width="2.4"
+                height="1.1"
+                position="0 0 0"
+              />
+              <a-text
+                value="Deneyim Tamamlandi!\n\nLutfen VR gozlugunu cikarin\nve ekrani kontrol edin."
+                align="center"
+                color="#22d3ee"
+                width="2.1"
+                position="0 0.05 0.01"
+                wrap-count="30"
+              />
+            </a-entity>
+          )}
         </a-camera>
       </a-scene>
 
-      {!isEnded && (
+      {/* HTML kontroller — VR moduna girilince otomatik gizlenir */}
+      {!isEnded && !isInVRMode && (
         <VRControlBar
           isPlaying={isPlaying}
           isMuted={isMuted}
@@ -86,12 +128,15 @@ export const VRVideoScene: React.FC<VRVideoSceneProps> = ({
         />
       )}
 
-      <VRCompletionModal
-        isVisible={isEnded}
-        onDownloadCSV={onDownloadCSV}
-        onReplay={handleSeekStart}
-        onRestart={onRestart}
-      />
+      {/* HTML bitiş modalı — VR modunda değilken göster */}
+      {!isInVRMode && (
+        <VRCompletionModal
+          isVisible={isEnded}
+          onDownloadCSV={onDownloadCSV}
+          onReplay={handleSeekStart}
+          onRestart={onRestart}
+        />
+      )}
     </div>
   );
 };
